@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 
+'''
+source: https://learnopencv.com/paired-image-to-image-translation-pix2pix/#pytorch
+'''
 
 class Discriminator(nn.Module):
     def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d):

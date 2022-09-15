@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 
 
+'''
+source: https://learnopencv.com/paired-image-to-image-translation-pix2pix/#pytorch
+'''
+
 class UnetGenerator(nn.Module):
     """Create a Unet-based generator"""
     def __init__(self, input_nc, output_nc, nf=64, norm_layer=nn.BatchNorm2d, use_dropout=False):
