@@ -18,8 +18,12 @@ def random_crop(img, img_dim:tuple, upscaling_dim:tuple):
 
 
 #normalize data
-def normalize_data(img):
-    n_img = (img / 127.5) - 1
+def normalize_data(img, norm_range:tuple=(0,1)):
+    assert norm_range==(0,1) or norm_range==(-1,1)
+    if norm_range==(0,1):
+        n_img=img/255
+    else:
+        n_img=(img/127.5)-1
     return n_img
 
 
@@ -33,7 +37,8 @@ def img2np(img_path):
 def augment_data(input_imgs:list, 
                  target_img:np.array, 
                  img_dim:tuple, 
-                 upscaling:int=100):
+                 upscaling:int=100,
+                 norm_range:tuple=(0,1)):
     #resizing
     u_factor=np.round((upscaling/100),1)
     u_img_dim=(int(img_dim[0]*u_factor), int(img_dim[1]*u_factor))
@@ -53,8 +58,8 @@ def augment_data(input_imgs:list,
         m_input_imgs=j_input_imgs
         m_target_img=j_target_img
     #normalize
-    n_input_imgs=normalize_data(m_input_imgs)
-    n_target_img=normalize_data(m_target_img)
+    n_input_imgs=normalize_data(m_input_imgs, norm_range)
+    n_target_img=normalize_data(m_target_img, norm_range)
     return n_input_imgs, n_target_img
 
 
@@ -122,13 +127,19 @@ class VPCHM(Dataset):
                                                        test_size, 
                                                        val_size, 
                                                        seed)
+        self.partition='train'
         self.num_input=len(input_img_src)
         self.upscaling=upscaling 
     def __getitem__(self, item):
         input_imgs=[self.input_imgs[i][item] for i in range(self.num_input)]
         target_img=self.target_imgs[item]
         img_dim=(target_img.shape[1], target_img.shape[0])
-        a_input_img, a_target_img=augment_data(input_imgs, target_img, img_dim, self.upscaling)
-        return a_input_img, a_target_img
+        if self.partition=='train':
+            a_input_imgs, a_target_img=augment_data(input_imgs, target_img, img_dim, self.upscaling)
+            a_input_imgs=torch.Tensor(a_input_imgs)
+            a_target_img=torch.Tensor(a_target_img) 
+            return a_input_imgs, a_target_img.unsqueeze(0)
+        else:
+            return input_imgs, target_img.unsqueeze(0)
     def __len__(self):
         return len(self.target_imgs)
