@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset
 from sklearn.model_selection import train_test_split
 
+
 #cropping image
 def random_crop(img, img_dim:tuple, upscaling_dim:tuple):
     i_width, i_height = img_dim
@@ -12,15 +13,18 @@ def random_crop(img, img_dim:tuple, upscaling_dim:tuple):
     c_img=img[:, int(x):int(x)+i_height, int(y):int(y)+i_width]
     return c_img
 
+
 #normalize data
 def normalize_data(img):
     n_img = (img / 127.5) - 1
     return n_img
 
+
 #convert image to numpy array
 def img2np(img_path):
     array=cv2.cvtColor(np.array(Image.open(img_path)), cv2.COLOR_BGR2GRAY) 
     return array
+
 
 #augment data
 def augment_data(input_imgs:list, 
@@ -50,9 +54,10 @@ def augment_data(input_imgs:list,
     n_target_img=normalize_data(m_target_img)
     return n_input_imgs, n_target_img
 
-#load dataset
+
+#load data
 def load_dataset(input_img_src:list, 
-                 target_img_src, 
+                 target_img_src:np.array, 
                  partition:str='train', 
                  test_size:float=0.2, 
                  val_size:float=0.1,
@@ -98,10 +103,11 @@ def load_dataset(input_img_src:list,
     else:
         return input_imgs_test, target_imgs_test
 
-# Define dataset class
+
+#define dataset class
 class VPCHM(Dataset):
     def __init__(self, input_img_src:list, 
-                 target_img_src, 
+                 target_img_src:np.array, 
                  partition='train',
                  test_size:float=0.2, 
                  val_size:float=0.1, 
@@ -114,14 +120,12 @@ class VPCHM(Dataset):
                                                        val_size, 
                                                        seed)
         self.num_input=len(input_img_src)
-        self.upscaling=upscaling
-        
+        self.upscaling=upscaling 
     def __getitem__(self, item):
         input_imgs=[self.input_imgs[i][item] for i in range(self.num_input)]
         target_img=self.target_imgs[item]
         img_dim=(target_img.shape[1], target_img.shape[0])
         a_input_img, a_target_img=augment_data(input_imgs, target_img, img_dim, self.upscaling)
         return a_input_img, a_target_img
-
     def __len__(self):
         return len(self.target_imgs)
