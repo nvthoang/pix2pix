@@ -140,6 +140,8 @@ class VPCHM(Dataset):
             a_target_img=torch.Tensor(a_target_img) 
             return a_input_imgs, a_target_img.unsqueeze(0)
         else:
-            return input_imgs, target_img.unsqueeze(0)
+            input_imgs=torch.Tensor(input_imgs)
+            target_img=torch.Tensor(target_img).unsqueeze(0)
+            return input_imgs, target_img
     def __len__(self):
         return len(self.target_imgs)
