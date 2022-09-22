@@ -2,6 +2,7 @@ import os
 import numpy as np
 import torch
 import cv2
+import rasterio
 from PIL import Image
 from torch.utils.data import Dataset
 from sklearn.model_selection import train_test_split
@@ -28,8 +29,11 @@ def normalize_data(img, norm_range:tuple=(0,1)):
 
 
 #convert image to numpy array
-def img2np(img_path):
-    array=cv2.cvtColor(np.array(Image.open(img_path)), cv2.COLOR_BGR2GRAY) 
+def img2np(img_path, jpg=False):
+    if jpg:
+        array=cv2.cvtColor(np.array(Image.open(img_path)), cv2.COLOR_BGR2GRAY) 
+    else:
+        array=rasterio.open(img_path).read()[0] 
     return array
 
 
@@ -70,13 +74,14 @@ def load_dataset(input_img_src:list,
                  test_size:float=0.2, 
                  val_size:float=0.1,
                  upscaling:int=100,
-                 seed=0):
+                 seed=0,
+                 img_format:str='tiff'):
     assert partition in ['train', 'val', 'test']
     #load image
     num_files=len(os.listdir(target_img_src))
-    target_imgs=[img2np(f"{target_img_src}/{i}.jpg") 
+    target_imgs=[img2np(f"{target_img_src}/{i}.{img_format}") 
                  for i in range(1, num_files+1)]
-    input_imgs=[[img2np(f"{input_img_src[j]}/{i}.jpg") 
+    input_imgs=[[img2np(f"{input_img_src[j]}/{i}.{img_format}") 
                  for i in range(1, num_files+1)] 
                 for j in range(len(input_img_src))]
     #create train-val-test sets
@@ -121,7 +126,8 @@ class VPCHM(Dataset):
                  val_size:float=0.1, 
                  seed=0,
                  upscaling:int=100,
-                 padding_dim:tuple=(1200,1200)):
+                 padding_dim:tuple=(1200,1200),
+                 output_dim:tuple=(1024,1024)):
         self.input_imgs, self.target_imgs=load_dataset(input_img_src, 
                                                        target_img_src, 
                                                        partition, 
@@ -132,6 +138,7 @@ class VPCHM(Dataset):
         self.num_input=len(input_img_src)
         self.upscaling=upscaling 
         self.padding_dim=padding_dim
+        self.output_dim=output_dim
     def __getitem__(self, item):
         input_imgs=[self.input_imgs[i][item] for i in range(self.num_input)]
         target_img=self.target_imgs[item]
@@ -148,6 +155,9 @@ class VPCHM(Dataset):
         p_input_imgs[:, :target_img.shape[0], :target_img.shape[1]]=a_input_imgs
         p_target_img=torch.zeros(1, self.padding_dim[0], self.padding_dim[1])
         p_target_img[:, :target_img.shape[0], :target_img.shape[1]]=a_target_img
+        #output_size
+        p_input_imgs=cv2.resize(p_input_imgs, self.output_dim, interpolation=cv2.INTER_NEAREST)
+        p_target_img=cv2.resize(p_target_img, self.output_dim, interpolation=cv2.INTER_NEAREST)
         return p_input_imgs, p_target_img
     def __len__(self):
         return len(self.target_imgs)
