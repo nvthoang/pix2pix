@@ -41,7 +41,9 @@ def img2np(img_path, jpg=False):
 def augment_data(input_imgs:list, 
                  target_img:np.array, 
                  img_dim:tuple, 
+                 input_channel:int=3,
                  upscaling:int=100,
+                 normalize:bool=False,
                  norm_range:tuple=(0,1)):
     #resizing
     u_factor=np.round((upscaling/100),1)
@@ -52,7 +54,7 @@ def augment_data(input_imgs:list,
     stacked_imgs=np.stack(stacked_imgs, axis=0)
     #random jittering
     c_img=random_crop(stacked_imgs, img_dim, u_img_dim)
-    j_input_imgs, j_target_img=c_img[0:3], c_img[3]
+    j_input_imgs, j_target_img=c_img[0:input_channel], c_img[input_channel]
     #random mirroring
     random_factor=torch.rand(())
     if random_factor>0.5:
@@ -62,8 +64,12 @@ def augment_data(input_imgs:list,
         m_input_imgs=j_input_imgs
         m_target_img=j_target_img
     #normalize
-    n_input_imgs=normalize_data(m_input_imgs, norm_range)
-    n_target_img=normalize_data(m_target_img, norm_range)
+    if normalize:
+        n_input_imgs=normalize_data(m_input_imgs, norm_range)
+        n_target_img=normalize_data(m_target_img, norm_range)
+    else:
+        n_input_imgs=m_input_imgs
+        n_target_img=m_target_img
     return n_input_imgs, n_target_img
 
 
@@ -121,20 +127,21 @@ def load_dataset(input_img_src:list,
 class VPCHM(Dataset):
     def __init__(self, input_img_src:list, 
                  target_img_src:np.array, 
-                 partition='train',
+                 partition:str='train',
                  test_size:float=0.2, 
                  val_size:float=0.1, 
                  seed=0,
                  upscaling:int=100,
                  padding_dim:tuple=(1200,1200),
                  output_dim:tuple=(1024,1024)):
+        assert partition in ['train', 'val', 'test']
         self.input_imgs, self.target_imgs=load_dataset(input_img_src, 
                                                        target_img_src, 
                                                        partition, 
                                                        test_size, 
                                                        val_size, 
                                                        seed)
-        self.partition='train'
+        self.partition=partition
         self.num_input=len(input_img_src)
         self.upscaling=upscaling 
         self.padding_dim=padding_dim
@@ -155,9 +162,6 @@ class VPCHM(Dataset):
         p_input_imgs[:, :target_img.shape[0], :target_img.shape[1]]=a_input_imgs
         p_target_img=torch.zeros(1, self.padding_dim[0], self.padding_dim[1])
         p_target_img[:, :target_img.shape[0], :target_img.shape[1]]=a_target_img
-        #output_size
-        p_input_imgs=cv2.resize(p_input_imgs, self.output_dim, interpolation=cv2.INTER_NEAREST)
-        p_target_img=cv2.resize(p_target_img, self.output_dim, interpolation=cv2.INTER_NEAREST)
         return p_input_imgs, p_target_img
     def __len__(self):
         return len(self.target_imgs)
