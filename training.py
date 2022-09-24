@@ -24,10 +24,12 @@ def discriminator_loss(output, label):
 if os.path.isdir("./checkpoints")==False:
     os.makedirs("./checkpoints")
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 #training function
 def training(model,
              train_dl,
-             test_dl=None,
+             eval_dl=None,
              num_epochs:int=50,
              lr:float=0.0001,
              patch_dim:tuple=(30, 30),
@@ -118,13 +120,13 @@ def training(model,
         f.close()
         #===========================
         #Evaluation
-        if test_dl!=None:
+        if eval_dl!=None:
             generator.eval()
             discriminator.eval()
             with torch.no_grad():
-                num_batch=len(test_dl.dataset)
+                num_batch=len(eval_dl.dataset)
                 G_test_loss=D_test_loss=0.0
-                for input_img, target_img in test_dl:
+                for input_img, target_img in eval_dl:
                     input_img=resize_img(input_img)
                     target_img=resize_img(target_img)
                     input_img=input_img.to(device)
@@ -170,7 +172,7 @@ def training(model,
                     f.writelines(log + "\n")
                 f.close()
     #===========================
-    if test_dl!=None:
+    if eval_dl!=None:
         return (G_train_losses, D_train_losses), (G_test_losses, D_test_losses)  
     else:
         return (G_train_losses, D_train_losses)
