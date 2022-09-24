@@ -132,8 +132,7 @@ class VPCHM(Dataset):
                  val_size:float=0.1, 
                  seed=0,
                  upscaling:int=100,
-                 padding_dim:tuple=(1200,1200),
-                 output_dim:tuple=(1024,1024)):
+                 padding_dim:tuple=(1200,1200)):
         assert partition in ['train', 'val', 'test']
         self.input_imgs, self.target_imgs=load_dataset(input_img_src, 
                                                        target_img_src, 
