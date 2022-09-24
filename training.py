@@ -1,9 +1,11 @@
+from genericpath import isdir
 import torch 
 import torch.nn as nn
 from torch.autograd import Variable
 import torchvision.transforms as T
 import numpy as np
 import time
+import os
 
 #loss function
 adversarial_loss = nn.BCELoss() 
@@ -19,6 +21,8 @@ def discriminator_loss(output, label):
     disc_loss = adversarial_loss(output, label)
     return disc_loss
 
+if os.path.isdir("./checkpoints")==False:
+    os.makedirs("./checkpoints")
 
 #training function
 def training(model,
