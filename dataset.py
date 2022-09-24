@@ -79,7 +79,6 @@ def load_dataset(input_img_src:list,
                  partition:str='train', 
                  test_size:float=0.2, 
                  val_size:float=0.1,
-                 upscaling:int=100,
                  seed=0,
                  img_format:str='tiff'):
     assert partition in ['train', 'val', 'test']
