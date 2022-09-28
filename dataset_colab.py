@@ -164,14 +164,15 @@ class VPCHM(Dataset):
         target_img=self.target_imgs[item]
         img_dim=(target_img.shape[1], target_img.shape[0])
         if self.partition=='train':
-            a_input_imgs, a_target_img=augment_data(input_imgs, target_img, img_dim, self.upscaling)
+            a_input_imgs, a_target_img=augment_data(input_imgs, target_img, img_dim, 
+                                                    self.input_channel, self.upscaling)
             a_input_imgs=torch.Tensor(a_input_imgs.copy())
             a_target_img=torch.Tensor(a_target_img.copy()) 
         else:
             a_input_imgs=torch.Tensor(input_imgs.copy())
             a_target_img=torch.Tensor(target_img.copy()).unsqueeze(0)
         #padding
-        p_input_imgs=torch.zeros(4, self.padding_dim[0], self.padding_dim[1]) #----> NOTICE
+        p_input_imgs=torch.zeros(self.input_channel, self.padding_dim[0], self.padding_dim[1])
         p_input_imgs[:, :target_img.shape[0], :target_img.shape[1]]=a_input_imgs
         p_target_img=torch.zeros(1, self.padding_dim[0], self.padding_dim[1])
         p_target_img[:, :target_img.shape[0], :target_img.shape[1]]=a_target_img
