@@ -8,16 +8,18 @@ import time
 import os
 
 #loss function
-adversarial_loss = nn.BCELoss() 
-l1_loss = nn.L1Loss()
-
-def generator_loss(generated_image, target_img, G, real_target):
+def generator_loss(generated_image, target_img, G, real_target, lf='bce', l1:bool=True):
+    assert lf in ['bce', 'mse']
+    adversarial_loss = nn.BCELoss() if lf=='bce' else nn.MSELoss()
+    l1_loss = nn.L1Loss()
     gen_loss = adversarial_loss(G, real_target)
-    l1_l = l1_loss(generated_image, target_img)
+    l1_l = l1_loss(generated_image, target_img) if l1 else 0
     gen_total_loss = gen_loss + (100 * l1_l)
     return gen_total_loss
 
-def discriminator_loss(output, label):
+def discriminator_loss(output, label, lf='bce'):
+    assert lf in ['bce', 'mse']
+    adversarial_loss = nn.BCELoss() if lf=='bce' else nn.MSELoss()
     disc_loss = adversarial_loss(output, label)
     return disc_loss
 
@@ -37,7 +39,8 @@ def training(model,
              save_model_per_n_epoch:int=None,
              start_epoch:int=1,
              start_val_loss:float=100.0,
-             current_best_epoch:int=1):
+             current_best_epoch:int=1,
+             loss_function='bce'):
     '''
     model: list [generator, discriminator]
     train_dl: data_loader for training set
@@ -45,6 +48,7 @@ def training(model,
     num_epochs: num of training epochs
     patch_dim: dim of patch returned by discriminator
     '''
+    assert loss_function in ['bce', 'mse']
     resize_img=T.Resize(resize_to)
     generator, discriminator=model[0], model[1]
     G_optimizer=torch.optim.Adam(generator.parameters(), lr=lr)
