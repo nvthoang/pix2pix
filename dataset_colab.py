@@ -43,6 +43,8 @@ def augment_data(input_imgs:list,
                  img_dim:tuple, 
                  input_channel:int=3,
                  upscaling:int=100,
+                 jittering:bool=True,
+                 mirroring:bool=True,
                  normalize:bool=False,
                  norm_range:tuple=(0,1)):
     #resizing
@@ -53,20 +55,28 @@ def augment_data(input_imgs:list,
     stacked_imgs.append(target_img)
     stacked_imgs=np.stack(stacked_imgs, axis=0)
     #random jittering
-    c_img=random_crop(stacked_imgs, img_dim, u_img_dim)
-    j_input_imgs, j_target_img=c_img[0:input_channel], c_img[input_channel]
+    if jittering:
+        c_img=random_crop(stacked_imgs, img_dim, u_img_dim) 
+        j_input_imgs, j_target_img=c_img[0:input_channel], c_img[input_channel]
+    else:
+        j_input_imgs, j_target_img=stacked_imgs, img_dim
     #random mirroring
-    random_factor=torch.rand(())
-    if random_factor>0.5:
-        m_input_imgs=np.array([np.fliplr(j_input_img) for j_input_img in j_input_imgs])
-        m_target_img=np.fliplr(j_target_img)
+    if mirroring:
+        random_factor=torch.rand(())
+        if random_factor>0.5:
+            m_input_imgs=np.array([np.fliplr(j_input_img) for j_input_img in j_input_imgs])
+            m_target_img=np.fliplr(j_target_img)
+        else:
+            m_input_imgs=j_input_imgs
+            m_target_img=j_target_img
     else:
         m_input_imgs=j_input_imgs
         m_target_img=j_target_img
     #normalize
     if normalize:
         n_input_imgs=normalize_data(m_input_imgs, norm_range)
-        n_target_img=normalize_data(m_target_img, norm_range)
+        n_target_img=m_target_img
+        # n_target_img=normalize_data(m_target_img, norm_range)
     else:
         n_input_imgs=m_input_imgs
         n_target_img=m_target_img
@@ -129,14 +139,24 @@ def load_dataset(input_img_src:list,
 
 #load the dataset input and target returned from load_dataset() function 
 # (used in google colab to avoid RAM leak)
-input_imgs_train = np.load("./data/input_imgs_train.npy", allow_pickle=True)
-input_imgs_val = np.load("./data/input_imgs_val.npy", allow_pickle=True)
-input_imgs_test = np.load("./data/input_imgs_test.npy", allow_pickle=True)
+# input_imgs_train = np.load("./data/input_imgs_train.npy", allow_pickle=True)
+# input_imgs_val = np.load("./data/input_imgs_val.npy", allow_pickle=True)
+# input_imgs_test = np.load("./data/input_imgs_test.npy", allow_pickle=True)
+# input_images = (input_imgs_train, input_imgs_val, input_imgs_test)
+
+# target_imgs_train = np.load("./data/target_imgs_train.npy", allow_pickle=True)
+# target_imgs_val = np.load("./data/target_imgs_val.npy", allow_pickle=True)
+# target_imgs_test = np.load("./data/target_imgs_test.npy", allow_pickle=True)
+# target_images = (target_imgs_train, target_imgs_val, target_imgs_test)
+
+input_imgs_train = np.load("./data/input_imgs_nntrain.npy", allow_pickle=True)
+input_imgs_val = np.load("./data/input_imgs_nnval.npy", allow_pickle=True)
+input_imgs_test = np.load("./data/input_imgs_nntest.npy", allow_pickle=True)
 input_images = (input_imgs_train, input_imgs_val, input_imgs_test)
 
-target_imgs_train = np.load("./data/target_imgs_train.npy", allow_pickle=True)
-target_imgs_val = np.load("./data/target_imgs_val.npy", allow_pickle=True)
-target_imgs_test = np.load("./data/target_imgs_test.npy", allow_pickle=True)
+target_imgs_train = np.load("./data/target_imgs_nntrain.npy", allow_pickle=True)
+target_imgs_val = np.load("./data/target_imgs_nnval.npy", allow_pickle=True)
+target_imgs_test = np.load("./data/target_imgs_nntest.npy", allow_pickle=True)
 target_images = (target_imgs_train, target_imgs_val, target_imgs_test)
 
 #define dataset class
@@ -146,7 +166,9 @@ class VPCHM(Dataset):
                 upscaling:int=100, 
                 input_channel:int=3, 
                 padding_dim:tuple=(1200,1200), 
-                output_dim:tuple=(1024,1024)):
+                output_dim:tuple=(1024,1024),
+                normalize:bool=False,
+                norm_range:tuple=(0,1)):
         assert partition in ['train', 'val', 'test']
         if partition=='train': 
             self.input_imgs, self.target_imgs = input_images[0], target_images[0]
@@ -159,18 +181,25 @@ class VPCHM(Dataset):
         self.upscaling=upscaling 
         self.padding_dim=padding_dim
         self.output_dim=output_dim
+        self.normalize=normalize
+        self.norm_range=norm_range
     def __getitem__(self, item):
         input_imgs=[self.input_imgs[i][item] for i in range(self.input_channel)]
         target_img=self.target_imgs[item]
         img_dim=(target_img.shape[1], target_img.shape[0])
         if self.partition=='train':
             a_input_imgs, a_target_img=augment_data(input_imgs, target_img, img_dim, 
-                                                    self.input_channel, self.upscaling)
+                                                    self.input_channel, self.upscaling,
+                                                    normalize=self.normalize, norm_range=self.norm_range)
             a_input_imgs=torch.Tensor(a_input_imgs.copy())
             a_target_img=torch.Tensor(a_target_img.copy()) 
         else:
-            a_input_imgs=torch.Tensor(input_imgs.copy())
-            a_target_img=torch.Tensor(target_img.copy()).unsqueeze(0)
+            a_input_imgs, a_target_img=augment_data(input_imgs, target_img, img_dim, 
+                                                    self.input_channel, upscaling=100,
+                                                    jittering=False, mirroring=False,
+                                                    normalize=self.normalize, norm_range=self.norm_range)
+            a_input_imgs=torch.Tensor(a_input_imgs.copy())
+            a_target_img=torch.Tensor(a_target_img.copy()) 
         #padding
         p_input_imgs=torch.zeros(self.input_channel, self.padding_dim[0], self.padding_dim[1])
         p_input_imgs[:, :target_img.shape[0], :target_img.shape[1]]=a_input_imgs
