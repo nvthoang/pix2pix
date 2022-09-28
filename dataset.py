@@ -75,7 +75,7 @@ def augment_data(input_imgs:list,
 
 #load data
 def load_dataset(input_img_src:list, 
-                 target_img_src:np.array, 
+                 target_img_src:str, 
                  partition:str='train', 
                  test_size:float=0.2, 
                  val_size:float=0.1,
@@ -125,7 +125,7 @@ def load_dataset(input_img_src:list,
 #define dataset class
 class VPCHM(Dataset):
     def __init__(self, input_img_src:list, 
-                 target_img_src:np.array, 
+                 target_img_src:str, 
                  partition:str='train',
                  test_size:float=0.2, 
                  val_size:float=0.1, 
@@ -140,23 +140,23 @@ class VPCHM(Dataset):
                                                        val_size, 
                                                        seed)
         self.partition=partition
-        self.num_input=len(input_img_src)
+        self.input_channel=len(input_img_src)
         self.upscaling=upscaling 
         self.padding_dim=padding_dim
-        self.output_dim=output_dim
     def __getitem__(self, item):
-        input_imgs=[self.input_imgs[i][item] for i in range(self.num_input)]
+        input_imgs=[self.input_imgs[i][item] for i in range(self.input_channel)]
         target_img=self.target_imgs[item]
         img_dim=(target_img.shape[1], target_img.shape[0])
         if self.partition=='train':
-            a_input_imgs, a_target_img=augment_data(input_imgs, target_img, img_dim, self.upscaling)
+            a_input_imgs, a_target_img=augment_data(input_imgs, target_img, img_dim, 
+                                                    self.input_channel, self.upscaling)
             a_input_imgs=torch.Tensor(a_input_imgs)
             a_target_img=torch.Tensor(a_target_img) 
         else:
             a_input_imgs=torch.Tensor(input_imgs)
             a_target_img=torch.Tensor(target_img).unsqueeze(0)
         #padding
-        p_input_imgs=torch.zeros(3, self.padding_dim[0], self.padding_dim[1])
+        p_input_imgs=torch.zeros(self.input_channel, self.padding_dim[0], self.padding_dim[1])
         p_input_imgs[:, :target_img.shape[0], :target_img.shape[1]]=a_input_imgs
         p_target_img=torch.zeros(1, self.padding_dim[0], self.padding_dim[1])
         p_target_img[:, :target_img.shape[0], :target_img.shape[1]]=a_target_img
