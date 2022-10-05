@@ -69,7 +69,7 @@ def training(model,
     current_best_epoch=current_best_epoch
     #===========================
     #Training
-    for epoch in range(start_epoch, start_epoch+num_epochs+1): 
+    for epoch in range(start_epoch, start_epoch+num_epochs): 
         generator.train()
         discriminator.train()
         G_train_loss=D_train_loss= 0.0
