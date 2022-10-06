@@ -59,7 +59,7 @@ def augment_data(input_imgs:list,
         c_img=random_crop(stacked_imgs, img_dim, u_img_dim) 
         j_input_imgs, j_target_img=c_img[0:input_channel], c_img[input_channel]
     else:
-        j_input_imgs, j_target_img=stacked_imgs, img_dim
+        j_input_imgs, j_target_img=stacked_imgs[0:input_channel], stacked_imgs[input_channel]
     #random mirroring
     if mirroring:
         random_factor=torch.rand(())
